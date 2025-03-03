@@ -22,3 +22,11 @@ Cargo.lock
 
 # logs
 logs/
+
+# macOS temporary files
+.DS_Store
+.AppleDouble
+.LSOverride
+Spotlight-V100/
+.VolumeIcon.icns
+.Trashes
