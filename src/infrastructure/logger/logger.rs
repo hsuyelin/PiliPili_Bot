@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::logger::level::LogLevel;
+use crate::infrastructure::logger::level::LogLevel;
 use super::internal_logger::InternalLogger;
 use std::sync::Mutex;
 use once_cell::sync::Lazy;

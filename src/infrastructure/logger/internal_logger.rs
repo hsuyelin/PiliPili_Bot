@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::logger::level::LogLevel;
+use crate::infrastructure::logger::level::LogLevel;
 use std::env;
 use chrono::Local;
 use std::fs;
