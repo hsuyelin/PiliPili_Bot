@@ -18,6 +18,7 @@ pub struct InternalLogger {
     max_log_count: usize,
     log_file: Option<BufWriter<fs::File>>,
     domain: Option<String>,
+    current_log_path: Option<PathBuf>,
 }
 
 impl InternalLogger {
@@ -38,6 +39,7 @@ impl InternalLogger {
             max_log_count,
             log_file: None,
             domain: Some(domain.unwrap_or_else(|| "Logger".to_string())),
+            current_log_path: None,
         };
         logger.init_log_file();
         logger
@@ -59,7 +61,7 @@ impl InternalLogger {
         self.log_to_console(level, message);
         if let Some(log_dir) = &self.log_dir {
             self.init_log_file();
-            self.write_log_to_file(level, message);
+            self.log_to_file(level, message);
         }
     }
 
@@ -94,9 +96,14 @@ impl InternalLogger {
             let date_str = Local::now().format("%Y-%m-%d").to_string();
             let log_file_path = absolute_log_dir.join(format!("{}.log", date_str));
 
+            if self.current_log_path.as_ref() == Some(&log_file_path) {
+                return;
+            }
+
             match fs::OpenOptions::new().create(true).append(true).open(&log_file_path) {
                 Ok(file) => {
                     self.log_file = Some(BufWriter::new(file));
+                    self.current_log_path = Some(log_file_path.clone());
                     eprintln!("Log file initialized at: {}", log_file_path.display());
                 }
                 Err(e) => {
@@ -108,7 +115,7 @@ impl InternalLogger {
         }
     }
 
-    fn write_log_to_file(&mut self, level: LogLevel, message: &str) {
+    fn log_to_file(&mut self, level: LogLevel, message: &str) {
         if let Some(file_writer) = self.log_file.as_mut() {
             let level_str = match level {
                 LogLevel::Debug => "DEBUG",
@@ -117,13 +124,13 @@ impl InternalLogger {
                 LogLevel::Error => "ERROR",
             };
 
-            let formatted_message = format!(
-                "[{}] {} - {}", level_str, 
-                self.domain.as_ref().unwrap_or(&"Logger".to_string()), 
+            if let Err(e) = writeln!(
+                file_writer,
+                "[{}] {} - {}",
+                level_str,
+                self.domain.as_deref().unwrap_or("Logger"),
                 message
-            );
-            
-            if let Err(e) = writeln!(file_writer, "{}", formatted_message) {
+            ) {
                 eprintln!("Failed to write to log file: {}", e);
             }
 

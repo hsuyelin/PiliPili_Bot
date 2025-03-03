@@ -4,6 +4,8 @@
 mod tests {
 
     use pilipili_bot::logger::logger::Logger;
+    use std::thread;
+    use std::time::{Duration, Instant};
 
     #[test]
     fn test_log_rotation() {
@@ -14,5 +16,15 @@ mod tests {
     #[test]
     fn test_debug_log() {
         Logger::debug(None, "This is a debug log.")
+    }
+
+    #[test]
+    fn test_debug_log_with_interval() {
+        let start_time = Instant::now();
+
+        while start_time.elapsed() < Duration::new(10, 0) {
+            Logger::debug(None, "This is a debug log.");
+            thread::sleep(Duration::from_millis(25));
+        }
     }
 }
