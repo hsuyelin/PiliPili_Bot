@@ -52,6 +52,10 @@ impl InternalLogger {
     pub fn set_level(&mut self, log_level: LogLevel) {
         self.log_level = log_level;
     }
+    
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.is_enabled = enabled;
+    }
 
     pub fn log(&mut self, level: LogLevel, message: &str) {
         if !self.is_enabled || level < self.log_level {

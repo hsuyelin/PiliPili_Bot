@@ -41,6 +41,11 @@ impl Logger {
         let mut logger = LOGGER.lock().unwrap();
         logger.rotate_logs()
     }
+    
+    pub fn set_log_enabled(enabled: bool) {
+        let mut logger = LOGGER.lock().unwrap();
+        logger.set_enabled(enabled);
+    }
 
     fn log(level: LogLevel, domain: Option<String>, message: &str) {
         let mut logger = LOGGER.lock().unwrap();
