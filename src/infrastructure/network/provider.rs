@@ -1,33 +1,79 @@
-use crate::infrastructure::network::api::Api;
-use crate::infrastructure::network::response::ApiResponse;
-use crate::infrastructure::network::task::HttpMethod;
-use reqwest::{Client, Error};
+use crate::infrastructure::network::{Task, TargetType, Plugin};
+use reqwest::{Client, Method, header::USER_AGENT};
+use once_cell::sync::Lazy;
+
+static CLIENT: Lazy<Client> = Lazy::new(|| {
+    Client::builder()
+        .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
+        .build()
+        .expect("Failed to build HTTP client")
+});
 
 pub struct Provider {
-    client: Client,
+    plugins: Vec<Box<dyn Plugin>>,
 }
 
 impl Provider {
 
-    pub fn new() -> Self {
-        Provider {
-            client: Client::new(),
-        }
+    pub fn new(plugins: Vec<Box<dyn Plugin>>) -> Self {
+        Self { plugins }
     }
 
-    pub async fn send_request(api: &Api) -> Result<ApiResponse, Error> {
-        let url = format!("{}{}", api.base_url, api.path);
-        let request_builder = match api.method {
-            HttpMethod::GET => Provider::client.get(&url),
-            HttpMethod::POST => Provider::client.post(&url),
-            HttpMethod::PUT => Provider::client.put(&url),
-            HttpMethod::DELETE => Provider::client.delete(&url),
-        };
+    pub async fn send_request<T: TargetType>(&self, target: &T) -> Result<reqwest::Response, reqwest::Error> {
+        let url = format!(
+            "{}/{}",
+            target.base_url().trim_end_matches('/'),
+            target.path().trim_start_matches('/')
+        );
 
-        let request_builder = request_builder.headers(api.headers.clone());
-        let response = request_builder.send().await?;
-        let api_response = ApiResponse::from(response).await?;
+        let mut request = CLIENT.request(match target.method() {
+            crate::infrastructure::network::HttpMethod::Get => Method::GET,
+            crate::infrastructure::network::HttpMethod::Post => Method::POST,
+            crate::infrastructure::network::HttpMethod::Put => Method::PUT,
+            crate::infrastructure::network::HttpMethod::Delete => Method::DELETE,
+        }, &url);
 
-        Ok(api_response)
+        if let Some(headers) = target.headers() {
+            let mut header_map = reqwest::header::HeaderMap::new();
+            for (key, value) in headers {
+                if key.eq_ignore_ascii_case("User-Agent") {
+                    header_map.insert(USER_AGENT, value.parse().unwrap());
+                    continue;
+                }
+                header_map.insert(key, value.parse().unwrap());
+            }
+            request = request.headers(header_map);
+        }
+
+        match target.task() {
+            Task::RequestPlain => {}
+            Task::RequestJson(json_body) => {
+                request = request.json(&json_body);
+            }
+            Task::RequestParameters(params) => {
+                request = request.query(&params);
+            }
+        }
+
+        for plugin in &self.plugins {
+            let request = request.try_clone().unwrap().build()?;
+            plugin.on_request(&request);
+        }
+
+        let response = request.send().await;
+        match &response {
+            Ok(res) => {
+                for plugin in &self.plugins {
+                    plugin.on_response(res);
+                }
+            }
+            Err(err) => {
+                for plugin in &self.plugins {
+                    plugin.on_error(err);
+                }
+            }
+        }
+
+        response
     }
 }
