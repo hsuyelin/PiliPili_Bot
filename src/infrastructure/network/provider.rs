@@ -1,4 +1,4 @@
-use reqwest::{Client, Method, header::USER_AGENT};
+use reqwest::{Client, Method};
 use once_cell::sync::Lazy;
 
 use crate::infrastructure::network::{Task, TargetType, Plugin};
