@@ -8,14 +8,8 @@ mod tests {
     use std::time::{Duration, Instant};
 
     #[test]
-    fn test_log_rotation() {
-        Logger::rotate_logs();
-        Logger::debug(None, "Log rotation test.");
-    }
-
-    #[test]
     fn test_debug_log() {
-        Logger::debug(None, "This is a debug log.")
+        Logger::debug("".to_string(), "This is a debug log.")
     }
 
     #[test]
@@ -23,7 +17,7 @@ mod tests {
         let start_time = Instant::now();
 
         while start_time.elapsed() < Duration::new(10, 0) {
-            Logger::debug(None, "This is a debug log.");
+            Logger::debug("".to_string(), "This is a debug log.");
             thread::sleep(Duration::from_millis(25));
         }
     }

@@ -69,21 +69,6 @@ impl InternalLogger {
         }
     }
 
-    pub fn rotate_logs(&mut self) -> bool {
-        if let Some(path) = self.log_dir.take() {
-            let log_file_path = Path::new(&path);
-            if let Ok(metadata) = fs::metadata(log_file_path) {
-                if metadata.len() > self.max_log_size {
-                    return self.perform_log_rotation(log_file_path);
-                }
-            } else {
-                eprintln!("Failed to get log file metadata.");
-            }
-            self.log_dir = Some(path);
-        }
-        false
-    }
-
     fn init_log_file(&mut self) {
         if let Some(log_dir) = &self.log_dir {
             let absolute_log_dir = self.get_absolute_log_dir(log_dir);
@@ -159,6 +144,21 @@ impl InternalLogger {
             self.domain.as_ref().unwrap_or(&"Logger".to_string()),
             message
         );
+    }
+
+    fn rotate_logs(&mut self) -> bool {
+        if let Some(path) = self.log_dir.take() {
+            let log_file_path = Path::new(&path);
+            if let Ok(metadata) = fs::metadata(log_file_path) {
+                if metadata.len() > self.max_log_size {
+                    return self.perform_log_rotation(log_file_path);
+                }
+            } else {
+                eprintln!("Failed to get log file metadata.");
+            }
+            self.log_dir = Some(path);
+        }
+        false
     }
 
     fn perform_log_rotation(&mut self, log_file_path: &Path) -> bool {
