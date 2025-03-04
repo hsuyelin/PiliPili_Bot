@@ -1,6 +1,7 @@
-use crate::infrastructure::network::{Task, TargetType, Plugin};
 use reqwest::{Client, Method, header::USER_AGENT};
 use once_cell::sync::Lazy;
+
+use crate::infrastructure::network::{Task, TargetType, Plugin};
 
 static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
@@ -36,10 +37,6 @@ impl Provider {
         if let Some(headers) = target.headers() {
             let mut header_map = reqwest::header::HeaderMap::new();
             for (key, value) in headers {
-                if key.eq_ignore_ascii_case("User-Agent") {
-                    header_map.insert(USER_AGENT, value.parse().unwrap());
-                    continue;
-                }
                 header_map.insert(key, value.parse().unwrap());
             }
             request = request.headers(header_map);

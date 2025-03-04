@@ -1,21 +1,21 @@
-use crate::infrastructure::network::{HttpMethod, Task, TargetType};
 use std::collections::HashMap;
+use crate::infrastructure::network::{HttpMethod, Task, TargetType};
+use crate::infrastructure::config::Config;
 
 pub enum EmbyAPI {
-    GetUser { user_id: String, api_key: String },
+    GetUser { user_id: String },
 }
 
 impl TargetType for EmbyAPI {
 
-    fn base_url(&self) -> &str {
-        // <EMBY_DOMAIN> - Placeholder for now, will be read from the configuration file later
-        "<EMBY_DOMAIN>"
+    fn base_url(&self) -> String {
+        Config::get().emby.base_url.clone()
     }
 
-    fn path(&self) -> &str {
+    fn path(&self) -> String {
         match self {
             EmbyAPI::GetUser { user_id, .. } => {
-                Box::leak(format!("emby/Users/{}", user_id).into_boxed_str())
+                format!("emby/Users/{}", user_id)
             }
         }
     }
@@ -26,20 +26,22 @@ impl TargetType for EmbyAPI {
 
     fn task(&self) -> Task {
         match self {
-            EmbyAPI::GetUser { api_key, .. } => {
+            EmbyAPI::GetUser { user_id: _ } => {
+                let api_key = Config::get().emby.api_key.clone();
                 let mut params = HashMap::new();
-                params.insert("api_key".to_string(), api_key.clone());
+                params.insert("api_key".to_string(), api_key);
                 Task::RequestParameters(params)
             }
         }
     }
 
-    fn headers(&self) -> Option<Vec<(&'static str, &'static str)>> {
+    fn headers(&self) -> Option<Vec<(&'static str, String)>> {
+        let base_url = Config::get().emby.base_url.clone();
         Some(vec![
-            ("accept", "application/json"),
-            ("origin", "<EMBY_DOMAIN>"),
-            ("referer", "<EMBY_DOMAIN>/"),
-            ("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"),
+            ("accept", "application/json".to_string()),
+            ("origin", base_url.clone()),
+            ("referer", format!("{}/", base_url)),
+            ("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36".to_string()),
         ])
     }
 }

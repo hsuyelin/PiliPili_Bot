@@ -1,0 +1,3 @@
+[emby]
+base_url = "http://127.0.0.1:8096"
+api_key = "your_emby_api_key"

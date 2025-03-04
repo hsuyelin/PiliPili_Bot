@@ -1,6 +1,7 @@
+use reqwest::{Request, Response, Error};
+
 use crate::infrastructure::network::plugin::Plugin;
 use crate::infrastructure::logger::logger::Logger;
-use reqwest::{Request, Response, Error};
 
 pub struct CurlPlugin;
 

@@ -1,10 +1,8 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
 
 use crate::infrastructure::logger::level::LogLevel;
 use super::internal_logger::InternalLogger;
-use std::sync::Mutex;
-use once_cell::sync::Lazy;
 
 pub static LOGGER: Lazy<Mutex<InternalLogger>> = Lazy::new(|| {
     Mutex::new(InternalLogger::new(
@@ -50,6 +48,11 @@ impl Logger {
 
     pub fn error(domain: String, message: &str) {
         Self::log(LogLevel::Error, domain, message);
+    }
+    
+    pub fn rotate_logs() {
+        let mut logger = LOGGER.lock().unwrap();
+        logger.rotate_logs();
     }
 
     fn log(level: LogLevel, domain: String, message: &str) {

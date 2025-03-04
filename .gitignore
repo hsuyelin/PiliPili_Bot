@@ -30,3 +30,6 @@ logs/
 Spotlight-V100/
 .VolumeIcon.icns
 .Trashes
+
+# configs
+config/config.toml

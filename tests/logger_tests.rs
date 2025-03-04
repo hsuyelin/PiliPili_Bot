@@ -3,9 +3,10 @@
 #[cfg(test)]
 mod tests {
 
-    use pilipili_bot::infrastructure::logger::logger::Logger;
     use std::thread;
     use std::time::{Duration, Instant};
+    
+    use pilipili_bot::infrastructure::logger::logger::Logger;
     use pilipili_bot::infrastructure::logger::level::LogLevel;
 
     #[test]

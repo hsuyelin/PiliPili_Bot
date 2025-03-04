@@ -1,13 +1,11 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
-use crate::infrastructure::logger::level::LogLevel;
 use std::env;
 use chrono::Local;
 use std::fs;
 use std::io::{Write, BufWriter};
 use std::path::{Path, PathBuf};
 use colored::Colorize;
+
+use crate::infrastructure::logger::level::LogLevel;
 
 pub struct InternalLogger {
 
@@ -63,10 +61,25 @@ impl InternalLogger {
         }
 
         self.log_to_console(level, message);
-        if let Some(log_dir) = &self.log_dir {
+        if self.log_dir.as_ref().map(|s| !s.is_empty()).unwrap_or(false) {
             self.init_log_file();
             self.log_to_file(level, message);
         }
+    }
+
+    pub fn rotate_logs(&mut self) -> bool {
+        if let Some(path) = self.log_dir.take() {
+            let log_file_path = Path::new(&path);
+            if let Ok(metadata) = fs::metadata(log_file_path) {
+                if metadata.len() > self.max_log_size {
+                    return self.perform_log_rotation(log_file_path);
+                }
+            } else {
+                eprintln!("Failed to get log file metadata.");
+            }
+            self.log_dir = Some(path);
+        }
+        false
     }
 
     fn init_log_file(&mut self) {
@@ -148,21 +161,6 @@ impl InternalLogger {
         );
     }
 
-    fn rotate_logs(&mut self) -> bool {
-        if let Some(path) = self.log_dir.take() {
-            let log_file_path = Path::new(&path);
-            if let Ok(metadata) = fs::metadata(log_file_path) {
-                if metadata.len() > self.max_log_size {
-                    return self.perform_log_rotation(log_file_path);
-                }
-            } else {
-                eprintln!("Failed to get log file metadata.");
-            }
-            self.log_dir = Some(path);
-        }
-        false
-    }
-
     fn perform_log_rotation(&mut self, log_file_path: &Path) -> bool {
         let date_str = Local::now().format("%Y-%m-%d").to_string();
         let new_log_file = log_file_path.with_file_name(format!("{}.log.old", date_str));
@@ -174,12 +172,12 @@ impl InternalLogger {
             println!("Log file rotated to: {}", new_log_file.display());
         }
 
-        self.cleanup_old_logs(log_file_path);
+        self.cleanup_old_logs();
         self.init_log_file();
         true
     }
 
-    fn cleanup_old_logs(&mut self, log_file_path: &Path) {
+    fn cleanup_old_logs(&mut self) {
         if let Some(path) = &self.log_dir {
             let log_dir = Path::new(path);
             let mut log_files: Vec<_> = fs::read_dir(log_dir)
