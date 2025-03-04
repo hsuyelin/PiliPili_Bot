@@ -113,9 +113,11 @@ impl InternalLogger {
                 LogLevel::Error => "ERROR",
             };
 
+            let now = Local::now().format("%Y-%m-%d %H:%M:%S");
             if let Err(e) = writeln!(
                 file_writer,
-                "[{}] {} - {}",
+                "{} [{}] {} - {}",
+                now.to_string().bold(),
                 level_str,
                 self.domain.as_deref().unwrap_or("Logger"),
                 message

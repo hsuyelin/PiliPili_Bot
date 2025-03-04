@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use pilipili_bot::infrastructure::api::EmbyAPI;
+    use pilipili_bot::infrastructure::api::*;
     use pilipili_bot::infrastructure::network::*;
     use tokio;
-    use pilipili_bot::infrastructure::network::curl_logger_plugin::CurlLoggerPlugin;
 
     #[tokio::test]
     async fn test_emby_api_request_with_provider() {
@@ -12,7 +11,7 @@ mod tests {
             api_key: "<API_KEY>".to_string(),
         };
 
-        let provider = Provider::new(vec![Box::new(CurlLoggerPlugin)]);
+        let provider = Provider::new(vec![Box::new(CurlPlugin)]);
 
         match provider.send_request(&api).await {
             Ok(res) => {

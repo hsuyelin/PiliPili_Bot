@@ -2,12 +2,12 @@ use crate::infrastructure::network::plugin::Plugin;
 use crate::infrastructure::logger::logger::Logger;
 use reqwest::{Request, Response, Error};
 
-pub struct CurlLoggerPlugin;
+pub struct CurlPlugin;
 
-impl CurlLoggerPlugin {
+impl CurlPlugin {
 
     fn on_request_impl(&self, request: &Request) {
-        let curl_command = CurlLoggerPlugin::request_to_curl(request);
+        let curl_command = CurlPlugin::request_to_curl(request);
         Logger::info(
             "[NETWORK]".to_string(), 
             &format!("Sending request: {}", curl_command)
@@ -62,7 +62,7 @@ impl CurlLoggerPlugin {
     }
 }
 
-impl Plugin for CurlLoggerPlugin {
+impl Plugin for CurlPlugin {
 
     fn on_request(&self, request: &Request) {
         self.on_request_impl(request);
