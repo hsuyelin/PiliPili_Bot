@@ -183,7 +183,11 @@ impl InternalLogger {
             let mut log_files: Vec<_> = fs::read_dir(log_dir)
                 .unwrap()
                 .filter_map(Result::ok)
-                .filter(|entry| entry.path().extension() == Some(std::ffi::OsStr::new("log")))
+                .filter(|entry| {
+                    let file_path = entry.path();
+                    file_path.extension() == Some(std::ffi::OsStr::new("log"))
+                        && Some(&file_path) != self.current_log_path.as_ref()
+                })
                 .collect();
 
             log_files.sort_by(|a, b| {
