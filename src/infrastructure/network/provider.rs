@@ -56,8 +56,11 @@ impl Provider {
         }
 
         for plugin in &self.plugins {
-            let request = request.try_clone().unwrap().build()?;
-            plugin.on_request(&request);
+            if let Some(cloned_request) = request.try_clone() {
+                if let Ok(built_request) = cloned_request.build() {
+                    plugin.on_request(&built_request);
+                }
+            }
         }
 
         let response = request.send().await;

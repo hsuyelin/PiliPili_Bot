@@ -32,17 +32,22 @@ impl CurlPlugin {
         let mut curl_command = String::new();
         curl_command.push_str("curl -X ");
         curl_command.push_str(request.method().as_str());
-        curl_command.push_str(&format!(" '{}'", request.url()));
+        curl_command.push_str(&format!(" '{}' ", request.url()));
 
         for (name, value) in request.headers() {
-            curl_command.push_str(&format!(" -H \"{}: {}\"", name, value.to_str().unwrap()));
+            let escaped_value = value
+                .to_str()
+                .unwrap()
+                .replace('"', "\\\"")
+                .replace("'", "\\'");
+            curl_command.push_str(&format!("-H \"{}: {}\" ", name, escaped_value));
         }
 
         if let Some(body) = request.body() {
             let body_str = if let Some(text) = body.as_bytes().and_then(|bytes| {
                 std::str::from_utf8(bytes).ok()
             }) {
-                text.replace('\'', "\\'")
+                text.replace('\'', "\\'").replace('"', "\\\"")
             } else if let Some(chunk) = body.as_bytes() {
                 format!("Binary Data ({:?})", chunk.iter().take(50).map(|&b|
                     format!("{:02X}", b)).collect::<Vec<_>>().join(" "))
@@ -51,10 +56,7 @@ impl CurlPlugin {
             };
 
             if !body_str.is_empty() {
-                curl_command.push_str(
-                    &format!(" -d '{}'", body_str.replace('\'', "\\'")
-                        .replace('\"', "\\\""))
-                );
+                curl_command.push_str(&format!(" -d '{}'", body_str));
             }
         }
 
