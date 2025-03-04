@@ -1,4 +1,4 @@
-use crate::infrastructure::network::{HttpMethod, Task};
+use super::{HttpMethod, Task};
 
 pub trait TargetType {
     fn base_url(&self) -> String;

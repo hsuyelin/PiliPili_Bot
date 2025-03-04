@@ -1,7 +1,7 @@
 use reqwest::{Client, Method};
 use once_cell::sync::Lazy;
 
-use crate::infrastructure::network::{HttpMethod, Plugin, Task, TargetType};
+use super::{HttpMethod, Plugin, Task, TargetType};
 
 static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()

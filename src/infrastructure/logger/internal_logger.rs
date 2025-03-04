@@ -5,7 +5,7 @@ use std::io::{Write, BufWriter};
 use std::path::{Path, PathBuf};
 use colored::Colorize;
 
-use crate::infrastructure::logger::level::LogLevel;
+use super::level::LogLevel;
 
 pub struct InternalLogger {
 

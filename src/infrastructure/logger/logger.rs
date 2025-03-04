@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
-use crate::infrastructure::logger::level::LogLevel;
+use super::level::LogLevel;
 use super::internal_logger::InternalLogger;
 
 pub static LOGGER: Lazy<Mutex<InternalLogger>> = Lazy::new(|| {
