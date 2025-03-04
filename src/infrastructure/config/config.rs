@@ -8,6 +8,7 @@ use once_cell::sync::Lazy;
 use crate::infrastructure::logger::logger::Logger;
 use super::emby::EmbyConfig;
 
+const CONFIG_LOGGER_DOMAIN: &str = "[CONFIG]";
 const CONFIG_DIR: &str = "config";
 const CONFIG_FILE: &str = "config/config.toml";
 const TEMPLATE_FILE: &str = "src/infrastructure/config/config.template";
@@ -22,7 +23,7 @@ pub static CONFIG: Lazy<RwLock<Config>> = Lazy::new(|| {
         Ok(config) => RwLock::new(config),
         Err(error) => {
             Logger::error(
-                "[CONFIG]".to_string(),
+                CONFIG_LOGGER_DOMAIN.to_string(),
                 &format!("Config load fail: {}", error.to_string())
             );
             std::process::exit(1);
@@ -39,7 +40,7 @@ impl Config {
         if !config_dir.exists() {
             fs::create_dir(config_dir)?;
             Logger::info(
-                "[CONFIG]".to_string(),
+                CONFIG_LOGGER_DOMAIN.to_string(),
                 &format!("📂 Create config directory: {}", CONFIG_DIR)
             );
         }
@@ -49,12 +50,12 @@ impl Config {
             if template_path.exists() {
                 fs::copy(template_path, config_path)?;
                 Logger::info(
-                    "[CONFIG]".to_string(),
+                    CONFIG_LOGGER_DOMAIN.to_string(),
                     &format!("📄 Copy default config: {} -> {}", TEMPLATE_FILE, CONFIG_FILE)
                 );
             } else {
                 Logger::error(
-                    "[CONFIG]".to_string(),
+                    CONFIG_LOGGER_DOMAIN.to_string(),
                     &format!("❌ Config template file missing: {}", TEMPLATE_FILE)
                 );
                 return Err(io::Error::new(io::ErrorKind::NotFound, "Config template file missing").into());
@@ -64,7 +65,7 @@ impl Config {
         let config_content = fs::read_to_string(config_path)?;
         let config: Config = toml::from_str(&config_content)?;
         Logger::info(
-            "[CONFIG]".to_string(),
+            CONFIG_LOGGER_DOMAIN.to_string(),
             &format!(
                 "✅ Config load success at {}", 
                 config_path.to_str().unwrap_or("Invalid path")

@@ -5,26 +5,28 @@ use crate::infrastructure::logger::logger::Logger;
 
 pub struct CurlPlugin;
 
+const CURL_LOGGER_DOMAIN: &str = "[NETWORK]";
+
 impl CurlPlugin {
 
     fn on_request_impl(&self, request: &Request) {
         let curl_command = CurlPlugin::request_to_curl(request);
         Logger::info(
-            "[NETWORK]".to_string(), 
+            CURL_LOGGER_DOMAIN.to_string(), 
             &format!("Sending request: {}", curl_command)
         );
     }
 
     fn on_response_impl(&self, response: &Response) {
         Logger::info(
-            "[NETWORK]".to_string(), 
+            CURL_LOGGER_DOMAIN.to_string(), 
             &format!("Received response with status: {}", response.status())
         );
     }
 
     fn on_error_impl(&self, error: &Error) {
         Logger::error(
-            "[NETWORK]".to_string(), 
+            CURL_LOGGER_DOMAIN.to_string(), 
             &format!("Request occurred Error: {}", error.to_string())
         );
     }

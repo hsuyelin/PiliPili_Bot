@@ -1,7 +1,7 @@
 use reqwest::{Client, Method};
 use once_cell::sync::Lazy;
 
-use crate::infrastructure::network::{Task, TargetType, Plugin};
+use crate::infrastructure::network::{HttpMethod, Plugin, Task, TargetType};
 
 static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
@@ -20,7 +20,10 @@ impl Provider {
         Self { plugins }
     }
 
-    pub async fn send_request<T: TargetType>(&self, target: &T) -> Result<reqwest::Response, reqwest::Error> {
+    pub async fn send_request<T: TargetType>(
+        &self, 
+        target: &T
+    ) -> Result<reqwest::Response, reqwest::Error> {
         let url = format!(
             "{}/{}",
             target.base_url().trim_end_matches('/'),
@@ -28,10 +31,10 @@ impl Provider {
         );
 
         let mut request = CLIENT.request(match target.method() {
-            crate::infrastructure::network::HttpMethod::Get => Method::GET,
-            crate::infrastructure::network::HttpMethod::Post => Method::POST,
-            crate::infrastructure::network::HttpMethod::Put => Method::PUT,
-            crate::infrastructure::network::HttpMethod::Delete => Method::DELETE,
+            HttpMethod::Get => Method::GET,
+            HttpMethod::Post => Method::POST,
+            HttpMethod::Put => Method::PUT,
+            HttpMethod::Delete => Method::DELETE,
         }, &url);
 
         if let Some(headers) = target.headers() {
