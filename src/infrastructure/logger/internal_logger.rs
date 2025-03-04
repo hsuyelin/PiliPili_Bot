@@ -117,7 +117,7 @@ impl InternalLogger {
             if let Err(e) = writeln!(
                 file_writer,
                 "{} [{}] {} - {}",
-                now.to_string().bold(),
+                now.to_string(),
                 level_str,
                 self.domain.as_deref().unwrap_or("Logger"),
                 message
