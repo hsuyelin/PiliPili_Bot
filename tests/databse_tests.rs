@@ -46,7 +46,7 @@ mod tests {
                 id: row.try_get("id")?,
                 name: row.try_get("name")?,
                 email: row.try_get("email")?,
-                deleted: row.try_get::<i32, _>("deleted")? != 0,
+                deleted: row.try_get::<bool, _>("deleted")? != false,
             })
         }
 
