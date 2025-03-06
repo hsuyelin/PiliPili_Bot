@@ -78,7 +78,7 @@ mod tests {
         repo.create(&user).await?;
 
         // Fetch the user by ID
-        let fetched_user = repo.get_by_id("1").await?;
+        let fetched_user = repo.fetch("1").await?;
         assert!(fetched_user.is_some());
         let fetched_user = fetched_user.unwrap();
         assert_eq!(fetched_user.name, "Alice");
@@ -90,17 +90,17 @@ mod tests {
             ..user.clone()
         };
         repo.update(&updated_user).await?;
-        let fetched_user = repo.get_by_id("1").await?;
+        let fetched_user = repo.fetch("1").await?;
         assert_eq!(fetched_user.unwrap().name, "Alice Updated");
 
         // Delete user
         repo.delete("1", true).await?;
-        let fetched_user = repo.get_by_id("1").await?;
+        let fetched_user = repo.fetch("1").await?;
         assert!(fetched_user.is_some());
         assert!(fetched_user.unwrap().deleted);
 
         repo.delete("1", false).await?;
-        let fetched_user = repo.get_by_id("1").await?;
+        let fetched_user = repo.fetch("1").await?;
         assert!(fetched_user.is_none());
 
         Ok(())

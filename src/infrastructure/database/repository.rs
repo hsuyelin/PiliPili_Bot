@@ -56,7 +56,7 @@ impl<T> CRUD<T> for Repository<T> where T: Entity<Sqlite> {
         Ok(())
     }
 
-    async fn get_by_id(&self, id: &str) -> Result<Option<T>, Error> {
+    async fn fetch(&self, id: &str) -> Result<Option<T>, Error> {
         let table_name = T::get_table_name();
         let query = format!("SELECT * FROM {} WHERE id = ?", table_name);
 
