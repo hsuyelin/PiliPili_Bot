@@ -3,4 +3,5 @@ pub mod infrastructure {
     pub mod network;
     pub mod api;
     pub mod config;
+    pub mod database;
 }

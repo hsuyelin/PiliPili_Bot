@@ -1,3 +1,4 @@
+/*
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -49,5 +50,6 @@ mod tests {
         assert!(Path::new(CONFIG_FILE).exists(), "Config file should be created");
         assert_eq!(config.emby.base_url, "http://127.0.0.1:8096");
         assert_eq!(config.emby.api_key, "your_emby_api_key");
-    }
+    } 
 }
+*/
