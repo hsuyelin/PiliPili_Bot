@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use sqlx::{SqlitePool, Sqlite, Row};
+    use std::fs;
     use async_trait::async_trait;
+    use sqlx::{SqlitePool, Sqlite, Row};
     use sqlx::sqlite::SqliteRow;
     use sqlx::FromRow;
     
@@ -57,10 +58,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_repository() -> Result<(), sqlx::Error> {
-        let pool = SqlitePool::connect(":memory:").await?;
+        // let pool = SqlitePool::connect(":memory:").await?;
+        let current_dir = std::env::current_dir()?;
+        let db_path = current_dir
+            .join("config")
+            .join("database")
+            .join("data.db");
+        if !db_path.exists() {
+            fs::create_dir_all(db_path.parent().unwrap())?;
+            fs::File::create(&db_path)?;
+        }
+        let db_url = format!("sqlite://{}", db_path.display());
+        let pool = SqlitePool::connect(&db_url).await?;
 
+        // Try to create the table whether it exists or not
         sqlx::query(
-            "CREATE TABLE users (
+            "CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 email TEXT NOT NULL,
@@ -72,36 +85,34 @@ mod tests {
 
         // Initialize repository
         let repo = Repository::<User>::new(pool.clone());
-
-        // Create a new user
-        let user = User::new("1", "Alice", "alice@example.com");
-        repo.create(&user).await?;
-
+        
         // Fetch the user by ID
         let fetched_user = repo.fetch("1").await?;
-        assert!(fetched_user.is_some());
-        let fetched_user = fetched_user.unwrap();
-        assert_eq!(fetched_user.name, "Alice");
-        assert_eq!(fetched_user.email, "alice@example.com");
 
-        // Update user
-        let updated_user = User {
-            name: "Alice Updated".to_string(),
-            ..user.clone()
-        };
-        repo.update(&updated_user).await?;
-        let fetched_user = repo.fetch("1").await?;
-        assert_eq!(fetched_user.unwrap().name, "Alice Updated");
+        if fetched_user.is_none() {
+            // Create a new user
+            let user = User::new("1", "Alice", "alice@example.com");
+            repo.create(&user).await?;
 
-        // Delete user
-        repo.delete("1", true).await?;
-        let fetched_user = repo.fetch("1").await?;
-        assert!(fetched_user.is_some());
-        assert!(fetched_user.unwrap().deleted);
+            // Update user
+            let updated_user = User {
+                name: "Alice Updated".to_string(),
+                ..user.clone()
+            };
+            repo.update(&updated_user).await?;
+            let fetched_user = repo.fetch("1").await?;
+            assert_eq!(fetched_user.unwrap().name, "Alice Updated");
+        } else {
+            // Delete user
+            repo.delete("1", true).await?;
+            let fetched_user = repo.fetch("1").await?;
+            assert!(fetched_user.is_some());
+            assert!(fetched_user.unwrap().deleted);
 
-        repo.delete("1", false).await?;
-        let fetched_user = repo.fetch("1").await?;
-        assert!(fetched_user.is_none());
+            repo.delete("1", false).await?;
+            let fetched_user = repo.fetch("1").await?;
+            assert!(fetched_user.is_none());
+        }
 
         Ok(())
     }

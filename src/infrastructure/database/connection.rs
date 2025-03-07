@@ -1,34 +1,36 @@
-use sqlx::{Pool, Sqlite};
-use once_cell::sync::Lazy;
 use std::sync::Arc;
-use std::fs;
-use std::path::Path;
+use sqlx::{Pool, Any, Error};
 
-const DATABASE_DIR: &str = "config/database";
-const DATABASE_FILE: &str = "config/database/data.db";
+use super::adapter::{AnyDataBasePoolAdapter, DatabaseAdapter};
+use super::config::DatabaseConfig;
 
-static DB_POOL: Lazy<Arc<Pool<Sqlite>>> = Lazy::new(|| {
-    init_database();
-    let db_url = format!("sqlite://{}", DATABASE_FILE);
-    let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .max_connections(10)
-        .connect_lazy(&db_url)
-        .expect("Failed to create database connection pool");
-    Arc::new(pool)
-});
-
-fn init_database() {
-    let db_dir = Path::new(DATABASE_DIR);
-    if !db_dir.exists() {
-        fs::create_dir_all(db_dir).expect("Failed to create database directory");
-    }
-
-    let db_path = Path::new(DATABASE_FILE);
-    if !db_path.exists() {
-        fs::File::create(db_path).expect("Failed to create database file");
-    }
+#[derive(Clone)]
+pub struct DatabaseConnectionManager {
+    pool_adapter: Arc<dyn DatabaseAdapter>,
 }
 
-pub fn get_db_pool() -> Arc<Pool<Sqlite>> {
-    Arc::clone(&DB_POOL)
+impl DatabaseConnectionManager {
+
+    pub fn new(config: &DatabaseConfig) -> Self {
+        let pool = Self::initialize_pool(config);
+        let pool_adapter = Arc::new(AnyDataBasePoolAdapter::new(pool));
+        Self { pool_adapter }
+    }
+
+    fn initialize_pool(config: &DatabaseConfig) -> Pool<Any> {
+        let db_url = &config.get_db_url();
+        Pool::connect_lazy(db_url).expect("Failed to create database pool")
+    }
+
+    pub fn get_adapter(&self) -> Arc<dyn DatabaseAdapter> {
+        Arc::clone(&self.pool_adapter)
+    }
+
+    pub async fn execute_query(&self, query: &str) -> Result<u64, Error> {
+        self.pool_adapter.execute(query).await
+    }
+
+    pub async fn fetch_all_query(&self, query: &str) -> Result<Vec<sqlx::any::AnyRow>, Error> {
+        self.pool_adapter.fetch_all(query).await
+    }
 }

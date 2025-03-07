@@ -1,7 +1,7 @@
-use sqlx::{Pool, Sqlite, Row};
+use sqlx::{Pool, Row, Any};
 
 pub async fn get_table_schema(
-    pool: &Pool<Sqlite>,
+    pool: &Pool<Any>,
     table_name: &str
 ) -> Option<String> {
     let query = "SELECT sql FROM sqlite_master WHERE type='table' AND name = ?";

@@ -1,15 +1,34 @@
-use sqlx::{Sqlite, Pool};
+use sqlx::{Pool, Any};
 use std::fs;
 use std::path::Path;
-
-const MIGRATION_DIR: &str = "config/database/migrations";
+use crate::infrastructure::database::schema::get_table_schema;
 
 pub struct MigrationManager;
 
 impl MigrationManager {
+    
+    pub async fn ensure_database(
+        pool: &Pool<Any>, 
+        tables: Vec<&str>
+    ) -> Result<(), sqlx::Error> {
+        for table in tables {
+            if get_table_schema(pool, table).await.is_none() {
+                let create_table_sql = format!(
+                    "CREATE TABLE IF NOT EXISTS {} (id TEXT PRIMARY KEY, name TEXT)",
+                    table
+                );
+                sqlx::query(&create_table_sql).execute(pool).await?;
+            }
+        }
+        Ok(())
+    }
 
-    pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
-        let migration_path = Path::new(MIGRATION_DIR);
+    pub async fn run_migrations(
+        pool: &Pool<Any>,
+        migration_dir: &str
+    ) -> Result<(), sqlx::Error> {
+        let migration_path = Path::new(migration_dir);
+        
         if !migration_path.exists() {
             fs::create_dir_all(migration_path)?;
         }
