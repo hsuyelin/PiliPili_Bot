@@ -9,6 +9,7 @@ pub enum LogRotation {
 }
 
 impl LogRotation {
+
     pub fn create_file_appender(
         self, 
         directory: String, 

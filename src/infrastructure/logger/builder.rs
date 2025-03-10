@@ -18,6 +18,7 @@ pub struct LoggerBuilder {
 }
 
 impl Default for LoggerBuilder {
+
     fn default() -> Self {
         Self {
             level: LogLevel::Info,
@@ -32,6 +33,7 @@ impl Default for LoggerBuilder {
 }
 
 impl LoggerBuilder {
+
     pub fn with_level(mut self, level: LogLevel) -> Self {
         self.level = level;
         self

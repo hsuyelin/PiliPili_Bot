@@ -8,6 +8,7 @@ pub struct LogDisplayOptions {
 }
 
 impl Default for LogDisplayOptions {
+
     fn default() -> Self {
         Self {
             level: true,

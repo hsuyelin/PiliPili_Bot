@@ -11,6 +11,7 @@ pub enum LogLevel {
 }
 
 impl fmt::Display for LogLevel {
+
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let level_str = match *self {
             LogLevel::Off => "Off",
