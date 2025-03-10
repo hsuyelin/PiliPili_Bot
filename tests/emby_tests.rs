@@ -3,10 +3,18 @@ mod tests {
     use tokio;
     
     use pilipili_bot::infrastructure::api::*;
+    use pilipili_bot::infrastructure::logger::builder::LoggerBuilder;
+    use pilipili_bot::infrastructure::logger::{LogLevel, LogRotation, LogWriter};
     use pilipili_bot::infrastructure::network::*;
-    
+
     #[tokio::test]
     async fn test_emby_api_request_with_provider() {
+        let _guard = LoggerBuilder::default()
+            .with_level(LogLevel::Debug)
+            .with_writer(LogWriter::File)
+            .with_rolling(LogRotation::Daily)
+            .init();
+        
         let api = EmbyAPI::GetUser {
             user_id: "56ed750c57e14553ba2b3bd9c531e1a3".to_string()
         };

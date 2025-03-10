@@ -1,22 +1,25 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+use std::fmt;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
-    Debug = 1,
-    Info = 2,
-    Warn = 3,
-    Error = 4,
+    Off,
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace
 }
 
-impl PartialOrd for LogLevel {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for LogLevel {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (*self as u8).cmp(&(*other as u8))
+impl fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let level_str = match *self {
+            LogLevel::Off => "Off",
+            LogLevel::Error => "Error",
+            LogLevel::Warn => "Warn",
+            LogLevel::Info => "Info",
+            LogLevel::Debug => "Debug",
+            LogLevel::Trace => "Trace",
+        };
+        write!(f, "{}", level_str)
     }
 }

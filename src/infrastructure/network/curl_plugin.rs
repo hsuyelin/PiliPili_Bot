@@ -1,6 +1,5 @@
 use reqwest::{Request, Response, Error};
 
-use crate::infrastructure::logger::logger::Logger;
 use super::plugin::Plugin;
 
 pub struct CurlPlugin;
@@ -11,23 +10,23 @@ impl CurlPlugin {
 
     fn on_request_impl(&self, request: &Request) {
         let curl_command = CurlPlugin::request_to_curl(request);
-        Logger::info(
-            CURL_LOGGER_DOMAIN.to_string(), 
-            &format!("Sending request: {}", curl_command)
+        tracing::debug!(
+            CURL_LOGGER_DOMAIN, 
+            "Sending request: {}", curl_command
         );
     }
 
     fn on_response_impl(&self, response: &Response) {
-        Logger::info(
-            CURL_LOGGER_DOMAIN.to_string(), 
-            &format!("Received response with status: {}", response.status())
+        tracing::debug!(
+            CURL_LOGGER_DOMAIN, 
+            "Received response with status: {}", response.status()
         );
     }
 
     fn on_error_impl(&self, error: &Error) {
-        Logger::error(
-            CURL_LOGGER_DOMAIN.to_string(), 
-            &format!("Request occurred Error: {}", error.to_string())
+        tracing::error!(
+            CURL_LOGGER_DOMAIN, 
+            "Request occurred Error: {}", error
         );
     }
 
