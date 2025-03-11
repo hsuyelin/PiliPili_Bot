@@ -36,4 +36,3 @@ tracing-subscriber = { version = "0.3.19", features = [
     "local-time",
     "json"
 ] }
-hyper = "1.6.0"
