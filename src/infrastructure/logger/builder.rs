@@ -1,33 +1,25 @@
 use std::fmt::Debug;
-use clia_local_offset::current_local_offset;
-use time::macros::format_description;
-use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::fmt::{self, time::OffsetTime};
+use time::UtcOffset;
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry};
 
-use super::{LogLevel, LogWriter, LogRotation, LogFormat, LogDisplayOptions};
+use super::{LogLevel, LogRotation};
 
 #[derive(Debug, Clone)]
 pub struct LoggerBuilder {
-    level: LogLevel,
-    writer: LogWriter,
+    max_level: LogLevel,
     directory: String,
-    file_prefix: String,
-    rolling: LogRotation,
-    format: LogFormat,
-    display_options: LogDisplayOptions,
+    file_name_prefix: String,
+    rolling: LogRotation
 }
 
 impl Default for LoggerBuilder {
 
     fn default() -> Self {
         Self {
-            level: LogLevel::Info,
-            writer: LogWriter::File,
-            directory: "./logs".to_owned(),
-            file_prefix: "".to_owned(),
+            max_level: LogLevel::Info,
+            directory: "logs".to_owned(),
+            file_name_prefix: "".to_owned(),
             rolling: LogRotation::Daily,
-            format: LogFormat::Compact,
-            display_options: LogDisplayOptions::default(),
         }
     }
 }
@@ -35,12 +27,7 @@ impl Default for LoggerBuilder {
 impl LoggerBuilder {
 
     pub fn with_level(mut self, level: LogLevel) -> Self {
-        self.level = level;
-        self
-    }
-
-    pub fn with_writer(mut self, writer: LogWriter) -> Self {
-        self.writer = writer;
+        self.max_level = level;
         self
     }
 
@@ -50,7 +37,7 @@ impl LoggerBuilder {
     }
 
     pub fn with_file_prefix(mut self, file_prefix: &str) -> Self {
-        self.file_prefix = file_prefix.to_owned();
+        self.file_name_prefix = file_prefix.to_owned();
         self
     }
 
@@ -59,130 +46,48 @@ impl LoggerBuilder {
         self
     }
 
-    pub fn with_format(mut self, format: LogFormat) -> Self {
-        self.format = format;
-        self
-    }
+    pub fn init(self) {
+        let timer_fmt = time::format_description::parse(
+            "[year]-[month padding:zero]-[day padding:zero] [hour]:[minute]:[second].[subsecond digits:6]",
+        )
+            .expect("Failed to parse time format");
+        let time_offset = UtcOffset::current_local_offset()
+            .unwrap_or_else(|_| time::UtcOffset::UTC);
+        let timer = fmt::time::OffsetTime::new(time_offset, timer_fmt);
 
-    pub fn with_display_options(mut self, display_options: LogDisplayOptions) -> Self {
-        self.display_options = display_options;
-        self
-    }
+        let env_filter = EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| EnvFilter::new(self.max_level.to_string()));
 
-    //noinspection DuplicatedCode
-    pub fn init(self) -> WorkerGuard {
-        let file_appender = self.rolling.create_file_appender(
-            self.directory,
-            self.file_prefix
-        );
-        let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+        let file_appender = self.rolling
+            .create_file_appender(self.directory, self.file_name_prefix);
 
-        let offset = current_local_offset().expect("Can not get local offset!");
-        let timer = OffsetTime::new(
-            offset,
-            format_description!(
-                "[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]"
-            ),
-        );
+        let file_layer = fmt::Layer::new()
+            .compact()
+            .with_ansi(false)
+            .with_timer(timer.clone())
+            .with_level(true)
+            .with_target(false)
+            .with_file(true)
+            .with_line_number(true)
+            .with_thread_names(false)
+            .with_thread_ids(false)
+            .with_writer(file_appender);
 
-        let subscriber = tracing_subscriber::fmt()
-            .with_env_filter(
-                tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or(
-                    tracing_subscriber::EnvFilter::new(self.level.to_string()),
-                ),
-            )
-            .with_ansi(self.writer == LogWriter::Console);
+        let console_layer = fmt::Layer::new()
+            .compact()
+            .with_ansi(true)
+            .with_timer(timer)
+            .with_level(true)
+            .with_target(false)
+            .with_file(true)
+            .with_line_number(true)
+            .with_thread_names(true)
+            .with_thread_ids(false);
 
-        match self.format {
-            LogFormat::Pretty => {
-                let subscriber = subscriber
-                    .event_format(
-                        fmt::format()
-                            .pretty()
-                            .with_level(self.display_options.level)
-                            .with_target(self.display_options.target)
-                            .with_thread_ids(self.display_options.thread_ids)
-                            .with_thread_names(self.display_options.thread_names)
-                            .with_source_location(self.display_options.source_location)
-                    )
-                    .with_timer(timer);
-
-                match self.writer {
-                    LogWriter::File => {
-                        subscriber.with_writer(file_writer).init();
-                    }
-                    LogWriter::Console => {
-                        subscriber.with_writer(std::io::stdout).init();
-                    }
-                }
-            },
-            LogFormat::Compact => {
-                let subscriber = subscriber
-                    .event_format(
-                        fmt::format()
-                            .compact()
-                            .with_level(self.display_options.level)
-                            .with_target(self.display_options.target)
-                            .with_thread_ids(self.display_options.thread_ids)
-                            .with_thread_names(self.display_options.thread_names)
-                            .with_source_location(self.display_options.source_location)
-                    )
-                    .with_timer(timer);
-
-                match self.writer {
-                    LogWriter::File => {
-                        subscriber.with_writer(file_writer).init();
-                    }
-                    LogWriter::Console => {
-                        subscriber.with_writer(std::io::stdout).init();
-                    }
-                }
-            },
-            LogFormat::Json => {
-                let subscriber = subscriber
-                    .event_format(
-                        fmt::format()
-                            .json()
-                            .with_level(self.display_options.level)
-                            .with_target(self.display_options.target)
-                            .with_thread_ids(self.display_options.thread_ids)
-                            .with_thread_names(self.display_options.thread_names)
-                            .with_source_location(self.display_options.source_location)
-                    )
-                    .with_timer(timer);
-
-                match self.writer {
-                    LogWriter::File => {
-                        subscriber.with_writer(file_writer).init();
-                    }
-                    LogWriter::Console => {
-                        subscriber.with_writer(std::io::stdout).init();
-                    }
-                }
-            },
-            LogFormat::Full => {
-                let subscriber = subscriber
-                    .event_format(
-                        fmt::format()
-                            .with_level(self.display_options.level)
-                            .with_target(self.display_options.target)
-                            .with_thread_ids(self.display_options.thread_ids)
-                            .with_thread_names(self.display_options.thread_names)
-                            .with_source_location(self.display_options.source_location)
-                    )
-                    .with_timer(timer);
-
-                match self.writer {
-                    LogWriter::File => {
-                        subscriber.with_writer(file_writer).init();
-                    }
-                    LogWriter::Console => {
-                        subscriber.with_writer(std::io::stdout).init();
-                    }
-                }
-            }
-        }
-        
-        guard
+        Registry::default()
+            .with(env_filter)
+            .with(file_layer)
+            .with(console_layer)
+            .init();
     }
 }

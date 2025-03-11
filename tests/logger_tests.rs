@@ -1,19 +1,20 @@
 #[cfg(test)]
 mod tests {
 
+    use pilipili_bot::{debug_log, error_log, info_log, trace_log, warn_log};
     use pilipili_bot::infrastructure::logger::builder::LoggerBuilder;
-    use pilipili_bot::infrastructure::logger::{LogLevel, LogRotation};
+    use pilipili_bot::infrastructure::logger::LogLevel;
 
     #[test]
     fn test_log() {
-        let _guard = LoggerBuilder::default()
-            .with_level(LogLevel::Debug)
-            .with_rolling(LogRotation::Daily)
+        LoggerBuilder::default()
+            .with_level(LogLevel::Trace)
             .init();
 
-        tracing::debug!("This is a debug log.");
-        tracing::info!("This is a info log.");
-        tracing::warn!("This is a warn log.");
-        tracing::error!("This is a error log.");
+        debug_log!("[DOMAIN1]", "This is a debug log.");
+        info_log!("[DOMAIN2]", "This is a info log.");
+        warn_log!("[DOMAIN3]", "This is a warn log.");
+        error_log!("[DOMAIN4]", "This is a error log.");
+        trace_log!("This is a trace log.");
     }
 }

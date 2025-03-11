@@ -5,6 +5,7 @@ use std::path::Path;
 use std::sync::RwLock;
 use once_cell::sync::Lazy;
 
+use crate::{error_log, info_log};
 use super::emby::EmbyConfig;
 
 const CONFIG_LOGGER_DOMAIN: &str = "[CONFIG]";
@@ -21,10 +22,8 @@ pub static CONFIG: Lazy<RwLock<Config>> = Lazy::new(|| {
     match Config::init() {
         Ok(config) => RwLock::new(config),
         Err(error) => {
-            tracing::error!(
-                CONFIG_LOGGER_DOMAIN,
-                "Config load fail: {}", error.to_string()
-            );
+            let message = format!("Failed to initialize configuration: {}", error);
+            error_log!(CONFIG_LOGGER_DOMAIN, message);
             std::process::exit(1);
         }
     }
@@ -38,25 +37,23 @@ impl Config {
 
         if !config_dir.exists() {
             fs::create_dir(config_dir)?;
-            tracing::info!(
-                CONFIG_LOGGER_DOMAIN,
-                "📂 Create config directory: {}", CONFIG_DIR
-            );
+            let message = format!("📂 Create config directory: {}", CONFIG_DIR);
+            info_log!(CONFIG_LOGGER_DOMAIN, message);
         }
 
         if !config_path.exists() {
             let template_path = Path::new(TEMPLATE_FILE);
             if template_path.exists() {
                 fs::copy(template_path, config_path)?;
-                tracing::info!(
-                    CONFIG_LOGGER_DOMAIN,
-                    "📄 Copy default config: {} -> {}", TEMPLATE_FILE, CONFIG_FILE
+                let message = format!(
+                    "📄 Copy default config: {} -> {} success!", 
+                    template_path.display(), 
+                    config_path.display()
                 );
+                info_log!(CONFIG_LOGGER_DOMAIN, message);
             } else {
-                tracing::error!(
-                    CONFIG_LOGGER_DOMAIN,
-                    "❌ Config template file missing: {}", TEMPLATE_FILE
-                );
+                let message = format!("❌ Config template file missing: {}", TEMPLATE_FILE);
+                error_log!(CONFIG_LOGGER_DOMAIN, message);
                 return Err(
                     io::Error::new(
                         io::ErrorKind::NotFound, "Config template file missing"
@@ -68,10 +65,8 @@ impl Config {
 
         let config_content = fs::read_to_string(config_path)?;
         let config: Config = toml::from_str(&config_content)?;
-        tracing::info!(
-            CONFIG_LOGGER_DOMAIN,
-            "✅ Config load success at {}", config_path.to_str().unwrap_or("Invalid path")
-        );
+        let message = format!("✅ Config load success at {}", config_path.display());
+        info_log!(CONFIG_LOGGER_DOMAIN, message);
 
         Ok(config)
     }

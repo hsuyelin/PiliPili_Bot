@@ -1,10 +1,12 @@
 use reqwest::{Client, Method};
 use once_cell::sync::Lazy;
-
 use super::{HttpMethod, Plugin, Task, TargetType};
 
 static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
+        .use_rustls_tls()
+        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
         .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
         .build()
         .expect("Failed to build HTTP client")
