@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use crate::infrastructure::network::{HttpMethod, Task, TargetType};
+use crate::infrastructure::network::{HttpMethod, NetworkTask, NetworkTarget};
 use crate::infrastructure::config::Config;
 
 pub enum EmbyAPI {
     GetUser { user_id: String },
 }
 
-impl TargetType for EmbyAPI {
+impl NetworkTarget for EmbyAPI {
 
     fn base_url(&self) -> String {
         Config::get().emby.base_url.clone()
@@ -25,13 +25,13 @@ impl TargetType for EmbyAPI {
         HttpMethod::Get
     }
 
-    fn task(&self) -> Task {
+    fn task(&self) -> NetworkTask {
         match self {
             EmbyAPI::GetUser { user_id: _ } => {
                 let api_key = Config::get().emby.api_key.clone();
                 let mut params = HashMap::new();
                 params.insert("api_key".to_string(), api_key);
-                Task::RequestParameters(params)
+                NetworkTask::RequestParameters(params)
             }
         }
     }

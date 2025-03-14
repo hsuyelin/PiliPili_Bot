@@ -1,7 +1,113 @@
+//! Provides the main network request handling functionality.
+//! 
+//! This module implements the core network provider that handles HTTP requests,
+//! including request building, sending, and plugin integration.
+//! 
+//! # Basic Usage
+//! 
+//! ```rust
+//! use infrastructure::network::{Provider, HttpMethod, Task, TargetType};
+//! 
+//! // 1. Create a simple target struct
+//! struct SimpleTarget {
+//!     base_url: String,
+//!     path: String,
+//!     method: HttpMethod,
+//! }
+//! 
+//! // 2. Implement the TargetType trait
+//! impl TargetType for SimpleTarget {
+//!     fn base_url(&self) -> String {
+//!         self.base_url.clone()
+//!     }
+//! 
+//!     fn path(&self) -> String {
+//!         self.path.clone()
+//!     }
+//! 
+//!     fn method(&self) -> HttpMethod {
+//!         self.method.clone()
+//!     }
+//! 
+//!     fn task(&self) -> Task {
+//!         Task::RequestPlain  // Simple request with URL only
+//!     }
+//! }
+//! 
+//! // 3. Create a Provider instance and send the request
+//! async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//!     let provider = Provider::new(vec![]);  // Can add plugins here
+//!     
+//!     let target = SimpleTarget {
+//!         base_url: "https://api.example.com".to_string(),
+//!         path: "users".to_string(),
+//!         method: HttpMethod::Get,
+//!     };
+//! 
+//!     let response = provider.send_request(&target).await?;
+//!     println!("Response: {:?}", response);
+//!     Ok(())
+//! }
+//! ```
+//! 
+//! # Supported Request Types
+//! 
+//! 1. Plain Request (RequestPlain)
+//!    - Simple request with URL and method only
+//!    - Suitable for GET requests without parameters
+//! 
+//! 2. JSON Request (RequestJson)
+//!    - Sends JSON formatted request body
+//!    - Suitable for POST/PUT requests that need to send data
+//! 
+//! 3. Parameter Request (RequestParameters)
+//!    - Sends URL query parameters
+//!    - Suitable for GET requests with URL parameters
+//! 
+//! # Plugin System
+//! 
+//! Provider supports a plugin system that allows custom processing of:
+//! - Pre-request handling
+//! - Post-response handling
+//! - Error handling
+//! 
+//! ```rust
+//! use infrastructure::network::plugin::Plugin;
+//! 
+//! struct LoggingPlugin;
+//! 
+//! impl Plugin for LoggingPlugin {
+//!     fn on_request(&self, request: &Request) {
+//!         println!("Sending request: {:?}", request);
+//!     }
+//! 
+//!     fn on_response(&self, response: &Response) {
+//!         println!("Received response: {:?}", response);
+//!     }
+//! 
+//!     fn on_error(&self, error: &Error) {
+//!         println!("Error occurred: {:?}", error);
+//!     }
+//! }
+//! 
+//! let provider = Provider::new(vec![Box::new(LoggingPlugin)]);
+//! ```
+
 use reqwest::{Client, Method};
 use once_cell::sync::Lazy;
-use super::{HttpMethod, Plugin, Task, TargetType};
 
+use super::http_method::HttpMethod;
+use super::plugin::NetworkPlugin;
+use super::task::NetworkTask;
+use super::target::NetworkTarget;
+
+/// A static HTTP client instance configured with default settings.
+/// 
+/// The client is configured to:
+/// - Use rustls for TLS
+/// - Accept invalid certificates (for development)
+/// - Accept invalid hostnames (for development)
+/// - Use a standard browser user agent
 static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
         .use_rustls_tls()
@@ -12,17 +118,44 @@ static CLIENT: Lazy<Client> = Lazy::new(|| {
         .expect("Failed to build HTTP client")
 });
 
-pub struct Provider {
-    plugins: Vec<Box<dyn Plugin>>,
+/// The main network request provider.
+/// 
+/// This struct handles the execution of network requests with plugin support.
+/// It manages:
+/// - Request building and sending
+/// - Plugin integration
+/// - Response handling
+pub struct NetworkProvider {
+    /// List of plugins to be executed during request lifecycle
+    plugins: Vec<Box<dyn NetworkPlugin>>,
 }
 
-impl Provider {
-
-    pub fn new(plugins: Vec<Box<dyn Plugin>>) -> Self {
+impl NetworkProvider {
+    /// Creates a new provider with the specified plugins.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `plugins` - Vector of plugins to be used for request processing
+    pub fn new(plugins: Vec<Box<dyn NetworkPlugin>>) -> Self {
         Self { plugins }
     }
 
-    pub async fn send_request<T: TargetType>(
+    /// Sends a network request to the specified target.
+    /// 
+    /// This method handles the complete request lifecycle:
+    /// 1. Builds the request with the target's configuration
+    /// 2. Executes request plugins
+    /// 3. Sends the request
+    /// 4. Executes response/error plugins
+    /// 
+    /// # Arguments
+    /// 
+    /// * `target` - The target to send the request to
+    /// 
+    /// # Returns
+    /// 
+    /// A `Result` containing either the response or an error
+    pub async fn send_request<T: NetworkTarget>(
         &self, 
         target: &T
     ) -> Result<reqwest::Response, reqwest::Error> {
@@ -48,11 +181,14 @@ impl Provider {
         }
 
         match target.task() {
-            Task::RequestPlain => {}
-            Task::RequestJson(json_body) => {
+            NetworkTask::RequestPlain => {
+                // For simple requests with just URL/path, no additional configuration is needed
+                // The request is already configured with the URL and method
+            }
+            NetworkTask::RequestJson(json_body) => {
                 request = request.json(&json_body);
             }
-            Task::RequestParameters(params) => {
+            NetworkTask::RequestParameters(params) => {
                 request = request.query(&params);
             }
         }

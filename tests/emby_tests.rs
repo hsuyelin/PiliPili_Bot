@@ -18,7 +18,7 @@ mod tests {
             user_id: "56ed750c57e14553ba2b3bd9c531e1a3".to_string()
         };
 
-        let provider = Provider::new(vec![Box::new(CurlPlugin)]);
+        let provider = NetworkProvider::new(vec![Box::new(CurlPlugin)]);
 
         match provider.send_request(&api).await {
             Ok(res) => {
